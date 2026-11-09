@@ -1,0 +1,14 @@
+{
+  "name": "grain-gradients",
+  "description": "Measured film grain for CSS gradients: the grain skill for Claude Code.",
+  "owner": {
+    "name": "Farhad1618"
+  },
+  "plugins": [
+    {
+      "name": "grain",
+      "source": "./",
+      "description": "Film grain for CSS gradients and backgrounds, measured instead of guessed. Scans a site, shows before/after pictures it takes itself, writes CSS that adapts to HDR and high-contrast screens, and checks its own work."
+    }
+  ]
+}

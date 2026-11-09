@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grain Bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="bench.css">
+<script type="module" src="bench.js"></script>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="bg" id="bg"></div>
+    <div class="noise" id="noise"></div>
+  </div>
+
+  <main class="sample" aria-hidden="true">
+    <h1>Get your price</h1>
+    <p>Send a file or pick a product.</p>
+  </main>
+
+  <div class="bar" id="bar"></div>
+  <button class="knob" id="knob" type="button" aria-label="Drag to compare before and after">⇔</button>
+  <div class="tag" id="tagBefore">BEFORE</div>
+  <div class="tag" id="tagAfter">AFTER</div>
+
+  <aside class="panel" id="panel">
+    <header>
+      <h2>Grain bench</h2>
+      <span class="progress" id="progress"></span>
+    </header>
+
+    <nav class="bgs" id="bgs" aria-label="Background"></nav>
+
+    <dl class="read" id="read"></dl>
+
+    <div class="opts" id="opts" role="radiogroup" aria-label="Grain option"></div>
+
+    <button class="best" id="best" type="button">This one looks best</button>
+
+    <details>
+      <summary>Picks and help</summary>
+      <ul class="picks" id="picks"></ul>
+      <div class="row">
+        <button type="button" id="download">Download picks.json</button>
+        <button type="button" id="copy">Copy</button>
+        <button type="button" id="clear">Clear</button>
+      </div>
+      <p class="help">Keys: ← → background · 1–5 option · B best. Drag the round handle to compare. Grain on the right of the line.</p>
+    </details>
+  </aside>
+</body>
+</html>

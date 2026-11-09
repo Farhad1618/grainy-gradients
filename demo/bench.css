@@ -1,0 +1,64 @@
+:root {
+  --panel: rgba(18, 19, 20, .94);
+  --line: rgba(255, 255, 255, .12);
+  --fg: #eee;
+  --mute: #9a9a9a;
+  --accent: #e57a3c;
+  --ok: #8fd18f;
+  --warn: #ff9b6a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: #111; color: var(--fg); font: 14px/1.45 Inter, system-ui, sans-serif; overflow: hidden; }
+
+.stage { position: fixed; inset: 0; isolation: isolate; }
+.bg, .noise { position: absolute; inset: 0; }
+.bg { background-size: cover; background-position: center; }
+.noise { pointer-events: none; }
+
+.sample { position: fixed; left: clamp(16px, 8vw, 140px); top: 22vh; pointer-events: none; }
+.sample h1 { margin: 0; font-size: clamp(40px, 7vw, 96px); font-weight: 600; letter-spacing: -.03em; line-height: 1; }
+.sample p { margin: 14px 0 0; font-size: clamp(18px, 2.2vw, 30px); opacity: .85; }
+body.on-light .sample { color: #1a1c1d; }
+
+.bar { position: fixed; top: 0; bottom: 0; width: 2px; margin-left: -1px; z-index: 5; background: rgba(255,255,255,.6); pointer-events: none; mix-blend-mode: difference; }
+.knob { position: fixed; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; z-index: 6; border-radius: 50%; border: 0;
+  background: #f2efe9; color: #1a1c1d; font: 600 15px/1 Inter, sans-serif; cursor: ew-resize; touch-action: none; box-shadow: 0 2px 12px rgba(0,0,0,.45); }
+.tag { position: fixed; top: 16px; z-index: 5; padding: 4px 10px; border-radius: 999px; pointer-events: none;
+  background: rgba(0,0,0,.6); color: #fff; font: 500 12px/1.4 'IBM Plex Mono', monospace; letter-spacing: .04em; }
+
+.panel { position: fixed; right: 16px; bottom: 16px; z-index: 10; width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
+  padding: 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(10px); }
+.panel header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.panel h2 { margin: 0; font: 600 12px/1 'IBM Plex Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.progress { font-size: 12px; color: var(--mute); }
+
+.bgs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+.bgs button { flex: 1 1 auto; font: inherit; font-size: 12px; padding: 6px 8px; border-radius: 8px; border: 1px solid #3a3c3d; background: #232526; color: #ccc; cursor: pointer; position: relative; }
+.bgs button[aria-pressed=true] { border-color: var(--accent); color: #fff; }
+.bgs button.done::after { content: "✓"; margin-left: 4px; color: var(--ok); }
+
+.read { margin: 0 0 12px; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 12px; }
+.read dt { color: var(--mute); }
+.read dd { margin: 0; }
+.read .hi { color: var(--warn); }
+.read .ok { color: var(--ok); }
+
+.opts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 3px; border-radius: 10px; background: #2a2c2d; margin-bottom: 10px; }
+.opts button { font: inherit; font-size: 12px; padding: 8px 0; border-radius: 8px; border: 0; background: none; color: #ccc; cursor: pointer; }
+.opts button[aria-checked=true] { background: var(--accent); color: #141617; font-weight: 600; }
+
+.best { width: 100%; font: 600 14px/1 Inter, sans-serif; padding: 12px; border-radius: 10px; border: 0; background: #f2efe9; color: #141617; cursor: pointer; margin-bottom: 10px; }
+.best.saved { background: var(--ok); }
+
+details { border-top: 1px solid #333; padding-top: 10px; font-size: 12px; }
+summary { cursor: pointer; color: var(--mute); }
+.picks { list-style: none; padding: 0; margin: 10px 0; font: 11px/1.5 'IBM Plex Mono', monospace; color: #ccc; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; }
+.row button { font: inherit; padding: 6px 10px; border-radius: 7px; border: 1px solid #444; background: #232526; color: #eee; cursor: pointer; }
+.help { color: var(--mute); margin: 10px 0 0; }
+
+@media (max-width: 600px) {
+  .panel { right: 8px; left: 8px; bottom: 8px; width: auto; max-height: 55vh; }
+}

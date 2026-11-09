@@ -1,0 +1,68 @@
+{
+  "about": "Visible-grain targets: the spread of L* (CIELAB lightness, 0-100), a perceptual scale, so the same number looks about the same on any colour. grain.js solves the blend and opacity that hit them. Below ~0.45 grain is invisible.",
+  "grain": {
+    "freq": 0.8,
+    "octaves": 3,
+    "tile": 200
+  },
+  "targets": {
+    "gradient": {
+      "dark": {
+        "subtle": 0.5,
+        "medium": 0.8,
+        "strong": 1.4
+      },
+      "mid": {
+        "subtle": 0.5,
+        "medium": 0.8,
+        "strong": 1.4
+      },
+      "light": {
+        "subtle": 0.5,
+        "medium": 0.8,
+        "strong": 1.4
+      }
+    },
+    "photo": {
+      "dark": {
+        "subtle": 0.5,
+        "medium": 0.9,
+        "strong": 1.6
+      },
+      "mid": {
+        "subtle": 0.5,
+        "medium": 0.9,
+        "strong": 1.6
+      },
+      "light": {
+        "subtle": 0.5,
+        "medium": 0.9,
+        "strong": 1.6
+      }
+    }
+  },
+  "confirmed": [
+    {
+      "group": "gradient",
+      "tone": "dark",
+      "L": 17.8,
+      "picked": "even",
+      "grain": 0.81,
+      "note": "A production site's dark radial gradient fading in over off-white: 0.14 / 0.27 / 0.44 showed no visible difference, even Strong. At 0.5 / 0.8 / 1.4 the site owner picked Even (soft-light, 0.81 L*). Mid and light use the same targets because L* is perceptual; not yet confirmed by eye.",
+      "date": "2026-11-08"
+    }
+  ],
+  "picks": [],
+  "screens": {
+    "about": "Websites can't tell OLED from LCD; they can tell HDR screens (most OLED phones, XDR laptops) and the high-contrast setting. Targets above are for the reference screen the picks were made on. HDR screens show deep darks harder, so dark backgrounds get a little less grain there. High contrast gets less grain everywhere. Factors are a first guess, not confirmed by eye.",
+    "reference": "sdr",
+    "referenceNote": "Owner's picks were made on a standard-range P3 display (dynamic-range: high false), 2026-11-09.",
+    "hdr": {
+      "dark": 0.85,
+      "mid": 0.92,
+      "light": 1
+    },
+    "contrastMore": 0.7,
+    "confirmed": false
+  }
+}

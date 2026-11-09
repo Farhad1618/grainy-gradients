@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Late render</title>
+<style>
+*{box-sizing:border-box} html,body{margin:0} body{font:16px/1.5 -apple-system,system-ui,"Segoe UI",Inter,sans-serif;color:#eef;background:#fff}
+.hero{position:relative;min-height:100vh;display:grid;place-items:center;text-align:center;padding:48px 24px;overflow:hidden}
+.hero h1{font-size:clamp(40px,7vw,88px);line-height:1;letter-spacing:-.03em;margin:0 0 18px;font-weight:650}
+.hero p{font-size:20px;opacity:.72;margin:0 auto 28px;max-width:34ch}
+.btn{display:inline-block;padding:13px 22px;border-radius:999px;background:#eef;color:#111;text-decoration:none;font-weight:600}
+nav{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:22px 32px;font-weight:600;z-index:3}
+.hero{background:linear-gradient(180deg,#2b2f4a,#12131c)}
+</style></head><body>
+<div id="root"></div><script>setTimeout(()=>{document.getElementById("root").innerHTML='<section class="hero" id="hero"><nav><span>Northwind</span><span style="opacity:.7">Pricing · Docs · Log in</span></nav><div><h1>Rendered late</h1><p>This section appears a second after load, like a React or Vue page.</p><a class="btn" href="#">Get started</a></div></section>'},1000)</script>
+</body></html>

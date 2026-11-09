@@ -1,0 +1,5 @@
+.DS_Store
+picks.json
+tests/out/
+grain-shots/
+node_modules/

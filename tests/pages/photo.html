@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Photo</title>
+<style>
+*{box-sizing:border-box} html,body{margin:0} body{font:16px/1.5 -apple-system,system-ui,"Segoe UI",Inter,sans-serif;color:#fff;background:#000}
+.hero{position:relative;min-height:100vh;display:grid;place-items:center;text-align:center;padding:48px 24px;overflow:hidden}
+.hero h1{font-size:clamp(40px,7vw,88px);line-height:1;letter-spacing:-.03em;margin:0 0 18px;font-weight:650}
+.hero p{font-size:20px;opacity:.72;margin:0 auto 28px;max-width:34ch}
+.btn{display:inline-block;padding:13px 22px;border-radius:999px;background:#fff;color:#000;text-decoration:none;font-weight:600}
+nav{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:22px 32px;font-weight:600;z-index:3}
+.hero{background:#000}.hero img{position:absolute;inset:0;place-self:stretch;width:100%;height:100%;object-fit:cover}.hero>div{position:relative}
+</style></head><body>
+<section class="hero" id="hero"><img id="ph" alt=""><nav><span>Northwind</span><span style="opacity:.7">Pricing · Docs · Log in</span></nav><div><h1>Photo hero</h1><p>A full-bleed image with text on top.</p><a class="btn" href="#">Get started</a></div></section><script>const c=document.createElement("canvas");c.width=900;c.height=600;const g=c.getContext("2d");const s=g.createLinearGradient(0,0,0,600);s.addColorStop(0,"#1d2b46");s.addColorStop(.55,"#d9875a");s.addColorStop(.56,"#2c2420");s.addColorStop(1,"#120e0c");g.fillStyle=s;g.fillRect(0,0,900,600);g.fillStyle="#f6d7a8";g.beginPath();g.arc(450,330,60,0,7);g.fill();document.getElementById("ph").src=c.toDataURL("image/png")</script>
+</body></html>

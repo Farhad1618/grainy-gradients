@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shade on top</title>
+<style>
+*{box-sizing:border-box} html,body{margin:0} body{font:16px/1.5 -apple-system,system-ui,"Segoe UI",Inter,sans-serif;color:#eceae6;background:#141617}
+.hero{position:relative;min-height:100vh;display:grid;place-items:center;text-align:center;padding:48px 24px;overflow:hidden}
+.hero h1{font-size:clamp(40px,7vw,88px);line-height:1;letter-spacing:-.03em;margin:0 0 18px;font-weight:650}
+.hero p{font-size:20px;opacity:.72;margin:0 auto 28px;max-width:34ch}
+.btn{display:inline-block;padding:13px 22px;border-radius:999px;background:#eceae6;color:#141617;text-decoration:none;font-weight:600}
+nav{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:22px 32px;font-weight:600;z-index:3}
+.hero{background:radial-gradient(130% 140% at 80% 96%,#4a525f 0%,#2c323b 34%,#191b20 62%,#131417 100%)}.shade{position:absolute;inset:0;place-self:stretch;pointer-events:none;background:linear-gradient(rgba(19,20,23,.72),transparent 200px)}.hero>div{position:relative;z-index:1}
+</style></head><body>
+<section class="hero" id="hero"><div class="shade"></div><nav><span>Northwind</span><span style="opacity:.7">Pricing · Docs · Log in</span></nav><div><h1>Shaded top</h1><p>A see-through fade sits over the gradient and would cover its grain.</p><a class="btn" href="#">Get started</a></div></section>
+</body></html>

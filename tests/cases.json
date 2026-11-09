@@ -1,0 +1,57 @@
+{
+ "dark-linear": {
+  "selector": "#hero",
+  "banding": true,
+  "showcase": true
+ },
+ "sunset": {
+  "selector": "#hero",
+  "showcase": true
+ },
+ "aurora": {
+  "selector": "#hero",
+  "showcase": true
+ },
+ "oklch": {
+  "selector": "#hero"
+ },
+ "pastel-light": {
+  "selector": "#hero",
+  "maxShift": 0.3,
+  "showcase": true
+ },
+ "near-black": {
+  "selector": "#hero",
+  "allowWeak": true,
+  "maxShift": 1.2
+ },
+ "pseudo-fixed": {
+  "selector": "body::before"
+ },
+ "scrim": {
+  "selector": "#hero",
+  "report": "Fades on top",
+  "showcase": true
+ },
+ "fade-in": {
+  "selector": "#bg"
+ },
+ "late-render": {
+  "selector": "#hero",
+  "wait": 1500
+ },
+ "canvas-over": {
+  "selector": "#hero"
+ },
+ "photo": {
+  "selector": "#hero",
+  "method": "child",
+  "kind": "photo",
+  "showcase": true
+ },
+ "csp": {
+  "selector": "#hero",
+  "page": "dark-linear",
+  "csp": true
+ }
+}
