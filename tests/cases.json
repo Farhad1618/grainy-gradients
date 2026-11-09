@@ -1,24 +1,20 @@
 {
  "dark-linear": {
   "selector": "#hero",
-  "banding": true,
-  "showcase": true
+  "banding": true
  },
  "sunset": {
-  "selector": "#hero",
-  "showcase": true
+  "selector": "#hero"
  },
  "aurora": {
-  "selector": "#hero",
-  "showcase": true
+  "selector": "#hero"
  },
  "oklch": {
   "selector": "#hero"
  },
  "pastel-light": {
   "selector": "#hero",
-  "maxShift": 0.3,
-  "showcase": true
+  "maxShift": 0.3
  },
  "near-black": {
   "selector": "#hero",
@@ -30,8 +26,7 @@
  },
  "scrim": {
   "selector": "#hero",
-  "report": "Fades on top",
-  "showcase": true
+  "report": "Fades on top"
  },
  "fade-in": {
   "selector": "#bg"
@@ -46,12 +41,35 @@
  "photo": {
   "selector": "#hero",
   "method": "child",
-  "kind": "photo",
-  "showcase": true
+  "kind": "photo"
  },
  "csp": {
   "selector": "#hero",
   "page": "dark-linear",
   "csp": true
+ },
+ "showcase-slate": {
+  "selector": "#hero",
+  "showcase": true
+ },
+ "showcase-ember": {
+  "selector": "#hero",
+  "showcase": true
+ },
+ "showcase-dusk": {
+  "selector": "#hero",
+  "showcase": true
+ },
+ "showcase-sand": {
+  "selector": "#hero",
+  "showcase": true
+ },
+ "showcase-moss": {
+  "selector": "#hero",
+  "showcase": true
+ },
+ "showcase-ink": {
+  "selector": "#hero",
+  "showcase": true
  }
 }

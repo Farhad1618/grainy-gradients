@@ -1,11 +1,11 @@
 {
-  "name": "grain-gradients",
+  "name": "grainy-gradients",
   "private": true,
   "description": "Claude skill: measured film grain for CSS gradients, with before/after pictures and a self-check.",
   "license": "MIT",
   "engines": { "node": ">=22" },
   "scripts": {
-    "build": "node skills/grain/scripts/build.mjs",
+    "build": "node skills/grainy-gradients/scripts/build.mjs",
     "test": "node tests/run.mjs",
     "showcase": "node tests/run.mjs --showcase"
   }

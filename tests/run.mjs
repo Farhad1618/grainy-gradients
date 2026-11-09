@@ -11,7 +11,7 @@ import { createServer } from 'node:http';
 import { readFileSync, mkdirSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openBrowser, openPage, lookAt, shootOptions, compare, diffOutside } from '../skills/grain/scripts/capture.mjs';
+import { openBrowser, openPage, lookAt, shootOptions, compare, diffOutside, card } from '../skills/grainy-gradients/scripts/capture.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const cases = JSON.parse(readFileSync(join(root, 'cases.json'), 'utf8'));
@@ -58,7 +58,12 @@ for (const [name, c] of Object.entries(cases)) {
     if (c.note && !info.notes.join(' ').includes(c.note)) problems.push(`notes should mention "${c.note}"`);
     if (c.method && info.method !== c.method) problems.push(`method ${info.method}, expected ${c.method}`);
     if (c.kind && info.look.kind !== c.kind) problems.push(`kind ${info.look.kind}, expected ${c.kind}`);
-    if (showcase && c.showcase) { mkdirSync(join(root, '..', 'docs', 'images'), { recursive: true }); copyFileSync(join(out, `${name}.png`), join(root, '..', 'docs', 'images', `${name}.png`)); }
+    if (showcase && c.showcase) {
+      mkdirSync(join(root, '..', 'docs', 'images'), { recursive: true });
+      const label = name.replace(/^showcase-/, ''), pretty = label[0].toUpperCase() + label.slice(1);
+      const { png } = await card(b, { before: shots.before, after: shots[rec], title: `${pretty} · ${rec === 'even' ? 'Even' : rec[0].toUpperCase() + rec.slice(1)}`, dpr: b.dpr });
+      writeFileSync(join(root, '..', 'docs', 'images', `${label}.png`), png);
+    }
   } catch (e) { problems.push(`threw: ${e.message}`); }
   if (problems.length) failed++;
   rows.push({ name, ok: !problems.length, rec: info?.recommended, m, problems, ms: Date.now() - t0 });

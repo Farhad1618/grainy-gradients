@@ -200,3 +200,45 @@ export async function diffOutside(b, before, after, clip, dpr) {
     return { changed: n ? diff / n : 0 };
   })()`);
 }
+
+/** A showcase picture: the page split down the middle (before | after), and under it the
+ *  area that bands the most, zoomed with the contrast boosted so stripes vs grain is obvious. */
+export async function card(b, { before, after, title, dpr }) {
+  const W = 1600, PAD = 28, IW = W - 2 * PAD;
+  await b.html(`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#0d0e10"></body>`);
+  await b.eval(PIXELS);
+  const m = await b.eval(`(async () => {
+    const P = grainPixels;
+    const A = await P.load(${JSON.stringify(dataUrl(before))}), B = await P.load(${JSON.stringify(dataUrl(after))});
+    const LA = P.lmap(A), LB = P.lmap(B);
+    const win = P.worstWindow(A, LA, Math.min(A.w, Math.round(300 * ${dpr})), Math.min(A.h, Math.round(110 * ${dpr})), { im: B, L: LB });
+    const [sA, sB] = P.stretch([A, B], win);
+    const da = P.stats(A, LA, win), db = P.stats(B, LB, win), sa = P.stats(A, LA), sb = P.stats(B, LB);
+    return { w: A.w, h: A.h, win, sA, sB, g0: da.grain, g1: db.grain, shift: sb.mean - sa.mean, b0: P.band(A, win) / ${dpr}, b1: P.band(B, win) / ${dpr} };
+  })()`);
+  const H = Math.round(IW * m.h / m.w), half = (IW - 20) / 2, sh = Math.round(half * m.win.h / m.win.w);
+  const pill = (t, side) => `<span style="position:absolute;bottom:22px;${side}:22px;padding:6px 14px;border-radius:999px;background:rgba(10,10,12,.62);color:#fff;font:600 13px/1 -apple-system,system-ui,sans-serif;letter-spacing:.08em;backdrop-filter:blur(6px)">${t}</span>`;
+  const facts = [`stripes ${m.b0.toFixed(0)}px → ${m.b1.toFixed(1)}px wide`, `grain ${m.g0.toFixed(2)} → ${m.g1.toFixed(2)}`, `brightness ${m.shift >= 0 ? '+' : ''}${m.shift.toFixed(2)}`].join('   ·   ');
+  const html = `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#0d0e10;color:#ecebe8;font:15px/1.4 -apple-system,system-ui,'Segoe UI',sans-serif">
+  <div id="c" style="width:${W}px;padding:${PAD}px ${PAD}px 6px;box-sizing:border-box">
+    <div style="position:relative;width:${IW}px;height:${H}px;overflow:hidden;border-radius:14px">
+      <img src="${dataUrl(before)}" style="position:absolute;inset:0;width:100%;height:100%">
+      <img src="${dataUrl(after)}" style="position:absolute;inset:0;width:100%;height:100%;clip-path:inset(0 0 0 50%)">
+      <div style="position:absolute;top:0;bottom:0;left:50%;width:2px;margin-left:-1px;background:rgba(255,255,255,.85)"></div>
+      ${pill('BEFORE', 'left')}${pill('AFTER', 'right')}
+    </div>
+    <div style="padding:20px 0 0;display:flex;gap:20px">
+      ${[['BEFORE · ZOOMED, CONTRAST BOOSTED', m.sA], ['AFTER · ZOOMED, CONTRAST BOOSTED', m.sB]].map(([t, s]) => `<div style="position:relative;width:${half}px;height:${sh}px;overflow:hidden;border-radius:12px">
+        <img src="${s}" style="width:100%;height:100%;image-rendering:pixelated;display:block">
+        <span style="position:absolute;left:14px;top:14px;padding:5px 11px;border-radius:999px;background:rgba(10,10,12,.66);font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em">${t}</span></div>`).join('')}
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:18px 4px 22px;color:#a9a7a2">
+      <span style="color:#ecebe8;font-weight:600">${esc(title)}</span><span>${esc(facts)}</span></div>
+  </div></body>`;
+  await b.html(html);
+  const rect = await b.eval(`(() => { const r = document.getElementById('c').getBoundingClientRect(); return { x: 0, y: 0, width: Math.ceil(r.width), height: Math.ceil(r.height) }; })()`);
+  await b.send('Emulation.setDeviceMetricsOverride', { width: W, height: Math.max(b.height, rect.height), deviceScaleFactor: 1, mobile: false });
+  const png = await b.shot(rect);
+  await b.send('Emulation.setDeviceMetricsOverride', { width: b.width, height: b.height, deviceScaleFactor: b.dpr, mobile: b.width < 768 });
+  return { png, metrics: { stripesBefore: +m.b0.toFixed(1), stripesAfter: +m.b1.toFixed(1), grainBefore: +m.g0.toFixed(2), grainAfter: +m.g1.toFixed(2), brightness: +m.shift.toFixed(2) } };
+}

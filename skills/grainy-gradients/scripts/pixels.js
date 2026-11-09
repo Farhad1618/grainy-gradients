@@ -84,19 +84,24 @@ window.grainPixels = (() => {
   // The window cut out with its levels stretched (the same mapping for both pictures, taken
   // from the first), so 8-bit steps show as stripes and grain shows as noise.
   function stretch(ims, win) {
-    const a = ims[0], vals = [[], [], []];
+    // Stretch brightness only, then tint it with the area's own average colour, so hues stay
+    // true (stretching each channel on its own turns a peach area blue).
+    const a = ims[0], ys = [], mean = [0, 0, 0];
+    const Y = (d, j) => 0.2126 * d[j] + 0.7152 * d[j + 1] + 0.0722 * d[j + 2];
     for (let i = 0; i < 4000; i++) {
       const x = win.x + Math.floor(rand() * win.w), y = win.y + Math.floor(rand() * win.h), j = (y * a.w + x) * 4;
-      for (let k = 0; k < 3; k++) vals[k].push(a.data[j + k]);
+      ys.push(Y(a.data, j)); for (let k = 0; k < 3; k++) mean[k] += a.data[j + k] / 4000;
     }
-    const lo = [], hi = [];
-    vals.forEach((v, k) => { v.sort((p, q) => p - q); lo[k] = v[Math.floor(v.length * 0.01)]; hi[k] = Math.max(lo[k] + 6, v[Math.floor(v.length * 0.99)]); });
+    ys.sort((p, q) => p - q);
+    const lo = ys[Math.floor(ys.length * 0.01)], hi = Math.max(lo + 4, ys[Math.floor(ys.length * 0.99)]);
+    const top = Math.max(...mean, 1), light = mean.map(v => v / top * 245), dark = mean.map(v => v / top * 18);
     return ims.map(im => {
       const c = document.createElement('canvas'); c.width = win.w; c.height = win.h;
       const g = c.getContext('2d'), out = g.createImageData(win.w, win.h);
       for (let y = 0; y < win.h; y++) for (let x = 0; x < win.w; x++) {
         const j = ((win.y + y) * im.w + win.x + x) * 4, o = (y * win.w + x) * 4;
-        for (let k = 0; k < 3; k++) out.data[o + k] = Math.max(0, Math.min(255, (im.data[j + k] - lo[k]) * 255 / (hi[k] - lo[k])));
+        const t = Math.max(0, Math.min(1, (Y(im.data, j) - lo) / (hi - lo)));
+        for (let k = 0; k < 3; k++) out.data[o + k] = dark[k] + t * (light[k] - dark[k]);
         out.data[o + 3] = 255;
       }
       g.putImageData(out, 0, 0);

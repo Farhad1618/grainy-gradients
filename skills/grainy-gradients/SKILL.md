@@ -1,9 +1,9 @@
 ---
-name: grain
+name: grainy-gradients
 description: Add film grain (noise) to CSS gradients and backgrounds so they look printed instead of plastic, and remove colour banding. Works on one background or a whole site or app, where it scans the codebase, lists every background and lets the person pick. It measures each background, picks the blend and amount itself, shows a before/after on the real page, and writes CSS that adapts to the visitor's screen (HDR/OLED, high contrast, print). Use when someone says a background or gradient looks cheap, flat, plastic, too smooth, digital or not premium, shows stripes or banding, asks for grain, noise, texture or a film or poster look, asks to check their site's gradients, or mentions the feTurbulence noise trick.
 ---
 
-# Grain
+# Grainy gradients
 
 Smooth digital gradients read as "computer". A fine noise layer makes them read as print or film, and it hides banding (visible stripes where a gradient steps from one 8-bit colour level to the next).
 

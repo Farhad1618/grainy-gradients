@@ -1,7 +1,7 @@
 // Grain bench: compare grain options on several backgrounds and record which looks best.
 // Picks are saved in this browser and can be downloaded as picks.json; their numbers
-// feed skills/grain/calibration.json.
-import { recommend, measure, lightness, parseColour, toneOf, banding, DITHER_MIN, svgUrl, noiseSvg } from '../skills/grain/scripts/grain.js';
+// feed skills/grainy-gradients/calibration.json.
+import { recommend, measure, lightness, parseColour, toneOf, banding, DITHER_MIN, svgUrl, noiseSvg } from '../skills/grainy-gradients/scripts/grain.js';
 
 const PICKS_KEY = 'grain-bench-picks';
 const STATE_KEY = 'grain-bench-state';
@@ -30,7 +30,7 @@ const VIDEO = { blend: 'overlay', opacity: 0.15, freq: 0.8, octaves: 4, tile: 20
 const videoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="${VIDEO.freq}" numOctaves="${VIDEO.octaves}" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>`;
 
 const $ = id => document.getElementById(id);
-const calibration = await fetch('../skills/grain/calibration.json').then(r => r.json());
+const calibration = await fetch('../skills/grainy-gradients/calibration.json').then(r => r.json());
 
 let state = { bg: 'dark', option: 'medium', split: 50 };
 try { Object.assign(state, JSON.parse(localStorage.getItem(STATE_KEY) || '{}')); } catch {}
