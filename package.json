@@ -1,12 +1,24 @@
 {
   "name": "grainy-gradients",
   "private": true,
-  "description": "Claude skill: measured film grain for CSS gradients, with before/after pictures and a self-check.",
+  "description": "Claude skill: measured film grain for CSS gradients, with before/after proof and a self-check.",
   "license": "MIT",
-  "engines": { "node": ">=22" },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "build": "node skills/grainy-gradients/scripts/build.mjs",
-    "test": "node tests/run.mjs",
-    "showcase": "node tests/run.mjs --showcase"
+    "build": "node tools/build.mjs",
+    "test": "node --test tests/engine.test.mjs && node tests/run.mjs",
+    "test:unit": "node --test tests/engine.test.mjs",
+    "test:pages": "node tests/run.mjs",
+    "showcase": "node tests/run.mjs --showcase",
+    "format": "prettier --write .",
+    "lint": "prettier --check . && node tools/build.mjs --check",
+    "demo": "node tools/demo-video.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "prettier": "3.10.1"
   }
 }

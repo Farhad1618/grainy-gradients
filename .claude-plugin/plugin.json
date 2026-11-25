@@ -1,22 +1,12 @@
 {
   "name": "grainy-gradients",
-  "version": "0.2.0",
-  "description": "Grainy gradients that look printed, not plastic, and stop banding. Measures each background, shows before/after proof, checks its own work.",
+  "version": "0.3.0",
+  "description": "The finishing pass for CSS gradients: measured film grain that looks printed, not plastic, and removes banding. Shows before/after proof and checks its own work.",
   "author": {
     "name": "Farhad1618"
   },
   "license": "MIT",
-  "keywords": [
-    "css",
-    "gradient",
-    "grain",
-    "noise",
-    "banding",
-    "feTurbulence",
-    "design",
-    "film-grain",
-    "dithering"
-  ],
+  "keywords": ["css", "gradient", "grain", "noise", "banding", "feTurbulence", "design", "film-grain", "dithering"],
   "homepage": "https://github.com/Farhad1618/grainy-gradients",
   "repository": "https://github.com/Farhad1618/grainy-gradients"
 }

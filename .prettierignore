@@ -1,0 +1,6 @@
+skills/grainy-gradients/assets/
+tests/out/
+docs/
+package-lock.json
+*.md
+*.html

@@ -1,0 +1,138 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>grainy-gradients demo stage</title>
+<!--
+  The stage for the README video. tools/demo-video.mjs loads it in headless Chrome, hands it
+  real before/after screenshots and their measurements with init(), then calls seek(seconds)
+  for every frame. Nothing here runs on a clock, so every render is identical.
+-->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1280px; height: 720px; overflow: hidden; background: #0d0e10; }
+  body { font: 16px/1.4 -apple-system, 'Inter', system-ui, sans-serif; color: #f1ebe3; -webkit-font-smoothing: antialiased; }
+  .shot { position: absolute; inset: 0; width: 1280px; height: 720px; }
+  #dim { position: absolute; inset: 0; background: #0b0b0c; opacity: 0; }
+  #bar { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255, 255, 255, 0.85); }
+  #knob { position: absolute; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: #f1ebe3; color: #17130f;
+    display: grid; place-items: center; font-weight: 700; box-shadow: 0 2px 14px rgba(0, 0, 0, 0.5); }
+  .pill { position: absolute; padding: 5px 11px; border-radius: 999px; background: rgba(0, 0, 0, 0.62); font: 600 11px/1.3 ui-monospace, 'SF Mono', Menlo, monospace; letter-spacing: 0.12em; white-space: nowrap; }
+  .pill.accent { background: #e58a4e; color: #1a120c; }
+  #caption { position: absolute; left: 0; right: 0; bottom: 54px; text-align: center; font-size: 30px; font-weight: 600; letter-spacing: -0.02em; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.7); }
+  #marker { position: absolute; border: 1.5px solid #fff; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
+  svg { position: absolute; inset: 0; }
+  svg line { stroke: #fff; stroke-width: 1.2; stroke-dasharray: 4 4; opacity: 0.8; }
+  .zoom { position: absolute; top: 150px; width: 300px; height: 300px; border-radius: 10px; border: 2px solid #fff; overflow: hidden; background: #000; box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6); transform-origin: 50% 50%; }
+  .zoom img { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+  .zoom-label { position: absolute; top: 468px; width: 300px; text-align: center; }
+  .zoom-label .pill { position: static; display: inline-block; }
+  #stats { position: absolute; left: 1020px; top: 158px; display: grid; gap: 30px; }
+  .stat b { display: block; font-size: 30px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .stat span { font: 500 11px/1.3 ui-monospace, 'SF Mono', Menlo, monospace; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.6; }
+  .stat em { font-style: normal; color: #e58a4e; }
+  #end { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; background: #0d0e10; opacity: 0; }
+  #end h1 { margin: 0 0 10px; font-size: 64px; font-weight: 600; letter-spacing: -0.035em; }
+  #end p { margin: 0; font-size: 24px; opacity: 0.7; }
+  #end code { display: inline-block; margin-top: 30px; padding: 9px 16px; border-radius: 8px; background: #1b1c1f; color: #e58a4e; font: 500 15px/1.3 ui-monospace, 'SF Mono', Menlo, monospace; }
+</style>
+
+<img class="shot" id="before" alt="" />
+<img class="shot" id="after" alt="" />
+<div id="dim"></div>
+<div id="bar"></div>
+<div id="knob">⇔</div>
+<div class="pill" id="pill-before">STANDARD</div>
+<div class="pill accent" id="pill-after">GRADED</div>
+<div id="marker"></div>
+<svg viewBox="0 0 1280 720"><line id="line-a" /><line id="line-b" /><line id="line-c" /><line id="line-d" /></svg>
+<div class="zoom" id="zoom-before" style="left: 310px"><img alt="" /></div>
+<div class="zoom" id="zoom-after" style="left: 670px"><img alt="" /></div>
+<div class="zoom-label" id="label-before" style="left: 310px"><span class="pill">STEPS</span></div>
+<div class="zoom-label" id="label-after" style="left: 670px"><span class="pill accent">NO STEPS</span></div>
+<div id="stats"></div>
+<div id="caption"></div>
+<div id="end"><div><h1>grainy-gradients</h1><p>Film grain for CSS gradients. Measured, not guessed.</p><code>npx skills add Farhad1618/grainy-gradients</code></div></div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const clamp = v => Math.max(0, Math.min(1, v));
+  const ease = v => (v < 0.5 ? 4 * v ** 3 : 1 - (-2 * v + 2) ** 3 / 2);
+  /** 0 before `from`, 1 after `to`, eased in between. */
+  const ramp = (t, from, to) => ease(clamp((t - from) / (to - from)));
+  const mix = (a, b, k) => a + (b - a) * k;
+
+  // The storyboard, in seconds.
+  const T = { sweep: [1.4, 3.4], zoom: [4.2, 4.9], zoomAfter: [5.5, 6.2], stats: [7.2, 7.9], end: [9.6, 10.2] };
+  const DURATION = 11.5;
+  const CAPTIONS = [
+    [0, 'A CSS gradient, as shipped.'],
+    [1.4, 'The same gradient, with measured film grain.'],
+    [4.2, 'Zoom in. The stripes are colour banding.'],
+    [5.5, 'Grain breaks them up.'],
+    [7.2, 'Measured on the real page.'],
+  ];
+  let data = null;
+
+  /** before/after: PNG data URLs of the same background. zoomBefore/zoomAfter: the worst
+   *  banding window from each, contrast stretched. win: where that window is. stats: rows. */
+  async function init(d) {
+    data = d;
+    $('before').src = d.before;
+    $('after').src = d.after;
+    $('zoom-before').firstElementChild.src = d.zoomBefore;
+    $('zoom-after').firstElementChild.src = d.zoomAfter;
+    Object.assign($('marker').style, { left: `${d.win.x}px`, top: `${d.win.y}px`, width: `${d.win.w}px`, height: `${d.win.h}px` });
+    $('stats').innerHTML = d.stats.map(([label, value]) => `<div class="stat"><b>${value}</b><span>${label}</span></div>`).join('');
+    await Promise.all([...document.images].map(i => i.decode()));
+    return DURATION;
+  }
+
+  function seek(t) {
+    // Before/after split: starts off the right edge, sweeps to 42%.
+    const split = mix(1284, 1280 * 0.42, ramp(t, ...T.sweep));
+    $('after').style.clipPath = `inset(0 0 0 ${split}px)`;
+    $('bar').style.left = $('knob').style.left = `${split}px`;
+    const swept = ramp(t, T.sweep[0], T.sweep[0] + 0.5);
+    $('pill-before').style.cssText = `left: 24px; bottom: 24px; opacity: 1`;
+    $('pill-after').style.cssText = `right: 24px; bottom: 24px; opacity: ${swept}`;
+
+    // Loupe: dim the page, then open the two zoom panels from the marker.
+    const zoom = ramp(t, ...T.zoom), zoomAfter = ramp(t, ...T.zoomAfter);
+    $('dim').style.opacity = 0.62 * zoom;
+    $('knob').style.opacity = $('bar').style.opacity = 1 - 0.75 * zoom;
+    $('marker').style.opacity = zoom;
+    const cx = data.win.x + data.win.w / 2, cy = data.win.y + data.win.h / 2;
+    const panel = (id, labelId, k, left) => {
+      const el = $(id);
+      const dx = cx - (left + 150), dy = cy - 300;
+      el.style.opacity = clamp(k * 3);
+      el.style.transform = `translate(${dx * (1 - k)}px, ${dy * (1 - k)}px) scale(${mix(data.win.w / 300, 1, k)})`;
+      $(labelId).style.opacity = clamp((k - 0.7) / 0.3);
+    };
+    panel('zoom-before', 'label-before', zoom, 310);
+    panel('zoom-after', 'label-after', zoomAfter, 670);
+    const line = (id, k, x2, y2) => {
+      const l = $(id);
+      l.setAttribute('x1', cx); l.setAttribute('y1', cy); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+      l.style.opacity = 0.8 * clamp((k - 0.6) / 0.4);
+    };
+    const edge = (left, top) => (cx < left ? [left, top] : cx > left + 300 ? [left + 300, top] : [cx, top]);
+    line('line-a', zoom, ...edge(310, 150)); line('line-b', zoom, ...edge(310, 450));
+    line('line-c', zoomAfter, ...edge(670, 150)); line('line-d', zoomAfter, ...edge(670, 450));
+
+    // Measured numbers, one after another.
+    [...$('stats').children].forEach((el, i) => {
+      const k = ramp(t, T.stats[0] + i * 0.35, T.stats[1] + i * 0.35);
+      el.style.opacity = k;
+      el.style.transform = `translateX(${(1 - k) * 14}px)`;
+    });
+
+    // Caption: the latest one whose time has come, fading in; hidden under the stats and end card.
+    const [start, text] = CAPTIONS.findLast(([at]) => t >= at);
+    $('caption').textContent = text;
+    $('caption').style.opacity = ramp(t, start, start + 0.35) * (1 - ramp(t, T.end[0] - 0.4, T.end[0]));
+    $('caption').style.bottom = t >= T.zoom[0] ? '652px' : '54px';
+
+    $('end').style.opacity = ramp(t, ...T.end);
+    return new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => done(1))));
+  }
+</script>

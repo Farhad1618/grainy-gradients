@@ -21,6 +21,13 @@
   - the stripes shrank
   - nothing else on the page changed or moved
   - there are no new errors
-- **Tested.** `npm test` runs the whole flow on 19 pages in [`tests/pages`](../tests/pages).
+- **Tested.** `npm test` runs 13 engine tests, then the whole flow on 19 pages in [`tests/pages`](../tests/pages).
 
-The code is in [`skills/grainy-gradients/scripts`](../skills/grainy-gradients/scripts): `grain.js` (engine), `look.js` (reads a background), `scan.mjs`, `shoot.mjs`, `review.mjs`, `check.mjs`.
+The code is in [`skills/grainy-gradients/scripts`](../skills/grainy-gradients/scripts):
+
+| Folder | What it does |
+|---|---|
+| `engine/` | Pure maths, the same in Node and in the page: `noise` (the `feTurbulence` port), `colour`, `measure`, `recommend` (solves blend and opacity), `css`, `analyse` (the whole job for one background). |
+| `browser/` | Runs in the page: `look` reads a background, `pixels` measures screenshots, `preview` is the in-page fallback. |
+| `headless/` | `chrome` talks to Chrome over its debugging port; `capture` takes the before/after pictures. |
+| top level | The commands: `scan`, `review`, `shoot`, `check`, `grain`. |

@@ -5,13 +5,22 @@ import { readFileSync } from 'node:fs';
 import { launch } from './chrome.mjs';
 
 const here = p => new URL(p, import.meta.url);
-const CORE = () => readFileSync(here('../dist/grain-core.js'), 'utf8');
-const PIXELS = readFileSync(here('./pixels.js'), 'utf8');
+const asset = name => readFileSync(here(`../../assets/${name}`), 'utf8');
+const CORE = asset('grain-core.js');
+const PIXELS = asset('grain-pixels.js');
+// Read from disk on every run, so an edited calibration.json applies without a rebuild.
+const calibration = () => readFileSync(here('../../calibration.json'), 'utf8');
 export const LABEL = { none: 'None', subtle: 'Subtle', medium: 'Medium', strong: 'Strong', even: 'Even' };
 export const VIEWPORTS = { desktop: { width: 1440, height: 900, dpr: 2 }, phone: { width: 390, height: 844, dpr: 3 } };
 const SETTLE = 1800; // ms to let scroll-driven effects and 3D scenes catch up
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-export const slug = s => s.replace(/::?/g, '-').replace(/[^\w-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'background';
+export const slug = s =>
+  s
+    .replace(/::?/g, '-')
+    .replace(/[^\w-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60) || 'background';
 
 export async function openBrowser(viewport = 'desktop') {
   return launch(typeof viewport === 'string' ? VIEWPORTS[viewport] : viewport);
@@ -20,7 +29,8 @@ export async function openBrowser(viewport = 'desktop') {
 /** Open the page and get the grain engine running in it. */
 export async function openPage(b, url) {
   await b.open(url);
-  await b.eval(CORE());
+  await b.eval(CORE);
+  await b.eval(`(__grain.setCalibration(${calibration()}), 1)`);
 }
 
 /** Stop animations and videos so every picture of a background shows the same moment. Run it
@@ -66,7 +76,8 @@ export async function lookAt(b, selector) {
   })()`);
   if (!res.missing) await freeze(b);
   if (res.missing) throw new Error(`No element matches ${selector} on this page.`);
-  if (res.clip.width < 4 || res.clip.height < 4) throw new Error(`${selector} isn't on screen (size ${res.clip.width}×${res.clip.height}).`);
+  if (res.clip.width < 4 || res.clip.height < 4)
+    throw new Error(`${selector} isn't on screen (size ${res.clip.width}×${res.clip.height}).`);
   return res;
 }
 
@@ -74,10 +85,15 @@ export async function lookAt(b, selector) {
 export function optionsFor(info, wanted = 'all') {
   let list = ['subtle', 'medium', 'strong', 'even'];
   if (info.evenSame) list = list.filter(o => o !== 'even');
-  const m = info.results.medium, s = info.results.strong;
+  const m = info.results.medium,
+    s = info.results.strong;
   if (m.unreachable && s.opacity === m.opacity && s.blend === m.blend) list = list.filter(o => o !== 'strong');
   if (wanted === 'recommended') return [info.recommended];
-  if (wanted !== 'all') return String(wanted).split(',').map(o => o.trim()).filter(o => o === 'none' || list.includes(o));
+  if (wanted !== 'all')
+    return String(wanted)
+      .split(',')
+      .map(o => o.trim())
+      .filter(o => o === 'none' || list.includes(o));
   return list;
 }
 
@@ -89,7 +105,8 @@ const pageClip = c => ({ x: c.x + (c.sx || 0), y: c.y + (c.sy || 0), width: c.wi
 export const RECTS = `[...document.querySelectorAll('body *')].filter(e => !e.closest('#grain-shot-layer')).slice(0, 1500).map(e => { const r = e.getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)]; })`;
 export function moved(a, b) {
   if (a.length !== b.length) return a.length - b.length;
-  let n = 0; for (let i = 0; i < a.length; i++) if (a[i].some((v, k) => Math.abs(v - b[i][k]) > 1)) n++;
+  let n = 0;
+  for (let i = 0; i < a.length; i++) if (a[i].some((v, k) => Math.abs(v - b[i][k]) > 1)) n++;
   return n;
 }
 
@@ -98,18 +115,23 @@ export async function shootOptions(b, selector, info, options, { screens = false
   const shots = { before: await b.shot(pageClip(info.clip)) };
   const full = { before: await b.shot() };
   const take = async (opt, screen = 'sdr') => {
-    await b.eval(`(__grain.apply(window.__ga[${JSON.stringify(selector)}], ${JSON.stringify(opt)}, ${JSON.stringify(screen)}), new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(1)))))`);
+    await b.eval(
+      `(__grain.apply(window.__ga[${JSON.stringify(selector)}], ${JSON.stringify(opt)}, ${JSON.stringify(screen)}), new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(1)))))`,
+    );
     await sleep(120);
     return b.shot(pageClip(info.clip));
   };
   for (const opt of options) {
     if (opt === 'none') continue;
     shots[opt] = await take(opt);
-    if (screens) for (const sc of ['hdr', 'contrast']) if (info.results[opt].screens?.[sc]) shots[`${opt}@${sc}`] = await take(opt, sc);
+    if (screens)
+      for (const sc of ['hdr', 'contrast'])
+        if (info.results[opt].screens?.[sc]) shots[`${opt}@${sc}`] = await take(opt, sc);
   }
   let layoutMoved = 0;
   if (options.includes(info.recommended)) {
-    await take(info.recommended); full[info.recommended] = await b.shot();
+    await take(info.recommended);
+    full[info.recommended] = await b.shot();
     layoutMoved = moved(rectsBefore, await b.eval(RECTS));
   }
   await b.eval('(__grain.remove(), 1)');
@@ -120,7 +142,9 @@ const dataUrl = buf => `data:image/png;base64,${buf.toString('base64')}`;
 
 /** Measure before and after in the browser, and draw the comparison picture. */
 export async function compare(b, { before, after, title, subtitle = '', dpr }) {
-  const W = 1600, half = 780, detailCss = { w: 168, h: 104 };
+  const W = 1600,
+    half = 780,
+    detailCss = { w: 168, h: 104 };
   await b.html(`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#0d0e10"></body>`);
   await b.eval(PIXELS);
   const m = await b.eval(`(async () => {
@@ -136,23 +160,37 @@ export async function compare(b, { before, after, title, subtitle = '', dpr }) {
       bandBefore: P.band(A, win) / ${dpr}, bandAfter: P.band(B, win) / ${dpr} };
   })()`);
   const metrics = {
-    grainAdded: +(Math.sqrt(Math.max(0, m.grainAfter ** 2 - m.grainBefore ** 2))).toFixed(2),
-    detailGrainBefore: +m.detailGrainBefore.toFixed(2), detailGrainAfter: +m.detailGrainAfter.toFixed(2),
-    grainBefore: +m.grainBefore.toFixed(2), grainAfter: +m.grainAfter.toFixed(2),
+    grainAdded: +Math.sqrt(Math.max(0, m.grainAfter ** 2 - m.grainBefore ** 2)).toFixed(2),
+    detailGrainBefore: +m.detailGrainBefore.toFixed(2),
+    detailGrainAfter: +m.detailGrainAfter.toFixed(2),
+    grainBefore: +m.grainBefore.toFixed(2),
+    grainAfter: +m.grainAfter.toFixed(2),
     brightness: +(m.meanAfter - m.meanBefore).toFixed(2),
-    bandBefore: +m.bandBefore.toFixed(1), bandAfter: +m.bandAfter.toFixed(1),
+    bandBefore: +m.bandBefore.toFixed(1),
+    bandAfter: +m.bandAfter.toFixed(1),
     detail: m.win,
   };
-  const scale = half / m.w, h1 = Math.round(m.h * scale);
-  const dh = Math.round(half * m.win.h / m.win.w);
-  const pane = (src, label, extra = '') => `<div style="position:relative;width:${half}px;height:${h1}px;overflow:hidden;border-radius:10px;background:#000">
+  const scale = half / m.w,
+    h1 = Math.round(m.h * scale);
+  const dh = Math.round((half * m.win.h) / m.win.w);
+  const pane = (
+    src,
+    label,
+    extra = '',
+  ) => `<div style="position:relative;width:${half}px;height:${h1}px;overflow:hidden;border-radius:10px;background:#000">
       <img src="${src}" style="width:${half}px;height:${h1}px;display:block">
       ${extra}<span style="position:absolute;left:12px;top:12px;${TAG}">${label}</span></div>`;
   const box = `<div style="position:absolute;left:${m.win.x * scale}px;top:${m.win.y * scale}px;width:${m.win.w * scale}px;height:${m.win.h * scale}px;border:2px solid #e57a3c;border-radius:3px;box-sizing:border-box"></div>`;
-  const zoom = (src, label) => `<div style="position:relative;width:${half}px;height:${dh}px;overflow:hidden;border-radius:10px;background:#000">
-      <img src="${src}" style="position:absolute;image-rendering:pixelated;width:${m.w * half / m.win.w}px;height:${m.h * half / m.win.w}px;left:${-m.win.x * half / m.win.w}px;top:${-m.win.y * half / m.win.w}px">
+  const zoom = (
+    src,
+    label,
+  ) => `<div style="position:relative;width:${half}px;height:${dh}px;overflow:hidden;border-radius:10px;background:#000">
+      <img src="${src}" style="position:absolute;image-rendering:pixelated;width:${(m.w * half) / m.win.w}px;height:${(m.h * half) / m.win.w}px;left:${(-m.win.x * half) / m.win.w}px;top:${(-m.win.y * half) / m.win.w}px">
       <span style="position:absolute;left:12px;top:12px;${TAG}">${label}</span></div>`;
-  const flat = (src, label) => `<div style="position:relative;width:${half}px;height:${dh}px;overflow:hidden;border-radius:10px;background:#000">
+  const flat = (
+    src,
+    label,
+  ) => `<div style="position:relative;width:${half}px;height:${dh}px;overflow:hidden;border-radius:10px;background:#000">
       <img src="${src}" style="width:${half}px;height:${dh}px;image-rendering:pixelated;display:block">
       <span style="position:absolute;left:12px;top:12px;${TAG}">${label}</span></div>`;
   const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`;
@@ -160,7 +198,9 @@ export async function compare(b, { before, after, title, subtitle = '', dpr }) {
     `grain in the box ${metrics.detailGrainBefore.toFixed(2)} → ${metrics.detailGrainAfter.toFixed(2)} L*`,
     `brightness ${fmt(metrics.brightness)} L*`,
     metrics.bandBefore >= 2 ? `flat stripes ${metrics.bandBefore}px → ${metrics.bandAfter}px wide` : null,
-  ].filter(Boolean).join('  ·  ');
+  ]
+    .filter(Boolean)
+    .join('  ·  ');
   const html = `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#0d0e10;font:15px/1.4 -apple-system,system-ui,Segoe UI,sans-serif;color:#eceae6">
     <div id="c" style="width:${W}px;padding:28px 0 30px;box-sizing:border-box">
       <div style="padding:0 ${(W - 2 * half - 20) / 2}px">
@@ -174,14 +214,27 @@ export async function compare(b, { before, after, title, subtitle = '', dpr }) {
         <div style="margin-top:16px;font-size:15px;color:#d8d5cf">${esc(facts)}</div>
       </div></div></body>`;
   await b.html(html);
-  const rect = await b.eval(`(() => { const r = document.getElementById('c').getBoundingClientRect(); return { x: 0, y: 0, width: Math.ceil(r.width), height: Math.ceil(r.height) }; })()`);
-  await b.send('Emulation.setDeviceMetricsOverride', { width: W, height: Math.max(b.height, rect.height), deviceScaleFactor: 1, mobile: false });
+  const rect = await b.eval(
+    `(() => { const r = document.getElementById('c').getBoundingClientRect(); return { x: 0, y: 0, width: Math.ceil(r.width), height: Math.ceil(r.height) }; })()`,
+  );
+  await b.send('Emulation.setDeviceMetricsOverride', {
+    width: W,
+    height: Math.max(b.height, rect.height),
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
   const png = await b.shot(rect);
-  await b.send('Emulation.setDeviceMetricsOverride', { width: b.width, height: b.height, deviceScaleFactor: b.dpr, mobile: b.width < 768 });
+  await b.send('Emulation.setDeviceMetricsOverride', {
+    width: b.width,
+    height: b.height,
+    deviceScaleFactor: b.dpr,
+    mobile: b.width < 768,
+  });
   return { png, metrics };
 }
-const TAG = 'padding:3px 9px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;font:600 11px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.06em';
-const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const TAG =
+  'padding:3px 9px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;font:600 11px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.06em';
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
 /** Compare two full-viewport pictures outside a rectangle: did anything else on the page change? */
 export async function diffOutside(b, before, after, clip, dpr) {
@@ -204,7 +257,9 @@ export async function diffOutside(b, before, after, clip, dpr) {
 /** A showcase picture: the page split down the middle (before | after), and under it the
  *  area that bands the most, zoomed with the contrast boosted so stripes vs grain is obvious. */
 export async function card(b, { before, after, title, dpr }) {
-  const W = 1600, PAD = 28, IW = W - 2 * PAD;
+  const W = 1600,
+    PAD = 28,
+    IW = W - 2 * PAD;
   await b.html(`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#0d0e10"></body>`);
   await b.eval(PIXELS);
   const m = await b.eval(`(async () => {
@@ -216,9 +271,16 @@ export async function card(b, { before, after, title, dpr }) {
     const da = P.stats(A, LA, win), db = P.stats(B, LB, win), sa = P.stats(A, LA), sb = P.stats(B, LB);
     return { w: A.w, h: A.h, win, sA, sB, g0: da.grain, g1: db.grain, shift: sb.mean - sa.mean, b0: P.band(A, win) / ${dpr}, b1: P.band(B, win) / ${dpr} };
   })()`);
-  const H = Math.round(IW * m.h / m.w), half = (IW - 20) / 2, sh = Math.round(half * m.win.h / m.win.w);
-  const pill = (t, side) => `<span style="position:absolute;bottom:22px;${side}:22px;padding:6px 14px;border-radius:999px;background:rgba(10,10,12,.62);color:#fff;font:600 13px/1 -apple-system,system-ui,sans-serif;letter-spacing:.08em;backdrop-filter:blur(6px)">${t}</span>`;
-  const facts = [`stripes ${m.b0.toFixed(0)}px → ${m.b1.toFixed(1)}px wide`, `grain ${m.g0.toFixed(2)} → ${m.g1.toFixed(2)}`, `brightness ${m.shift >= 0 ? '+' : ''}${m.shift.toFixed(2)}`].join('   ·   ');
+  const H = Math.round((IW * m.h) / m.w),
+    half = (IW - 20) / 2,
+    sh = Math.round((half * m.win.h) / m.win.w);
+  const pill = (t, side) =>
+    `<span style="position:absolute;bottom:22px;${side}:22px;padding:6px 14px;border-radius:999px;background:rgba(10,10,12,.62);color:#fff;font:600 13px/1 -apple-system,system-ui,sans-serif;letter-spacing:.08em;backdrop-filter:blur(6px)">${t}</span>`;
+  const facts = [
+    `stripes ${m.b0.toFixed(0)}px → ${m.b1.toFixed(1)}px wide`,
+    `grain ${m.g0.toFixed(2)} → ${m.g1.toFixed(2)}`,
+    `brightness ${m.shift >= 0 ? '+' : ''}${m.shift.toFixed(2)}`,
+  ].join('   ·   ');
   const html = `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#0d0e10;color:#ecebe8;font:15px/1.4 -apple-system,system-ui,'Segoe UI',sans-serif">
   <div id="c" style="width:${W}px;padding:${PAD}px ${PAD}px 6px;box-sizing:border-box">
     <div style="position:relative;width:${IW}px;height:${H}px;overflow:hidden;border-radius:14px">
@@ -228,17 +290,45 @@ export async function card(b, { before, after, title, dpr }) {
       ${pill('BEFORE', 'left')}${pill('AFTER', 'right')}
     </div>
     <div style="padding:20px 0 0;display:flex;gap:20px">
-      ${[['BEFORE · ZOOMED, CONTRAST BOOSTED', m.sA], ['AFTER · ZOOMED, CONTRAST BOOSTED', m.sB]].map(([t, s]) => `<div style="position:relative;width:${half}px;height:${sh}px;overflow:hidden;border-radius:12px">
+      ${[
+        ['BEFORE · ZOOMED, CONTRAST BOOSTED', m.sA],
+        ['AFTER · ZOOMED, CONTRAST BOOSTED', m.sB],
+      ]
+        .map(
+          ([t, s]) => `<div style="position:relative;width:${half}px;height:${sh}px;overflow:hidden;border-radius:12px">
         <img src="${s}" style="width:100%;height:100%;image-rendering:pixelated;display:block">
-        <span style="position:absolute;left:14px;top:14px;padding:5px 11px;border-radius:999px;background:rgba(10,10,12,.66);font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em">${t}</span></div>`).join('')}
+        <span style="position:absolute;left:14px;top:14px;padding:5px 11px;border-radius:999px;background:rgba(10,10,12,.66);font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em">${t}</span></div>`,
+        )
+        .join('')}
     </div>
     <div style="display:flex;justify-content:space-between;padding:18px 4px 22px;color:#a9a7a2">
       <span style="color:#ecebe8;font-weight:600">${esc(title)}</span><span>${esc(facts)}</span></div>
   </div></body>`;
   await b.html(html);
-  const rect = await b.eval(`(() => { const r = document.getElementById('c').getBoundingClientRect(); return { x: 0, y: 0, width: Math.ceil(r.width), height: Math.ceil(r.height) }; })()`);
-  await b.send('Emulation.setDeviceMetricsOverride', { width: W, height: Math.max(b.height, rect.height), deviceScaleFactor: 1, mobile: false });
+  const rect = await b.eval(
+    `(() => { const r = document.getElementById('c').getBoundingClientRect(); return { x: 0, y: 0, width: Math.ceil(r.width), height: Math.ceil(r.height) }; })()`,
+  );
+  await b.send('Emulation.setDeviceMetricsOverride', {
+    width: W,
+    height: Math.max(b.height, rect.height),
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
   const png = await b.shot(rect);
-  await b.send('Emulation.setDeviceMetricsOverride', { width: b.width, height: b.height, deviceScaleFactor: b.dpr, mobile: b.width < 768 });
-  return { png, metrics: { stripesBefore: +m.b0.toFixed(1), stripesAfter: +m.b1.toFixed(1), grainBefore: +m.g0.toFixed(2), grainAfter: +m.g1.toFixed(2), brightness: +m.shift.toFixed(2) } };
+  await b.send('Emulation.setDeviceMetricsOverride', {
+    width: b.width,
+    height: b.height,
+    deviceScaleFactor: b.dpr,
+    mobile: b.width < 768,
+  });
+  return {
+    png,
+    metrics: {
+      stripesBefore: +m.b0.toFixed(1),
+      stripesAfter: +m.b1.toFixed(1),
+      grainBefore: +m.g0.toFixed(2),
+      grainAfter: +m.g1.toFixed(2),
+      brightness: +m.shift.toFixed(2),
+    },
+  };
 }

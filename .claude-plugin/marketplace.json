@@ -8,7 +8,7 @@
     {
       "name": "grainy-gradients",
       "source": "./",
-      "description": "Grainy gradients that look printed, not plastic, and stop banding. Measures each background, shows before/after proof, checks its own work."
+      "description": "The finishing pass for CSS gradients: measured film grain that looks printed, not plastic, and removes banding. Shows before/after proof and checks its own work."
     }
   ]
 }

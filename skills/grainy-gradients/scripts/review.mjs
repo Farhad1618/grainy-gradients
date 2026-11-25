@@ -14,23 +14,36 @@ import { join, resolve, relative, sep } from 'node:path';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { shoot } from './shoot.mjs';
-import { analyse } from './grain.js';
-import { LABEL } from './capture.mjs';
+import { analyse } from './engine/index.mjs';
+import { LABEL } from './headless/capture.mjs';
 
 const argv = process.argv.slice(2);
 const groups = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--url') groups.push({ url: argv[++i], selectors: [] });
   else if (argv[i] === '--selector') {
-    if (!groups.length) { console.error('Put --url before its --selector flags.'); process.exit(1); }
-    groups.at(-1).selectors.push(...argv[++i].split('|').map(s => s.trim()).filter(Boolean));
+    if (!groups.length) {
+      console.error('Put --url before its --selector flags.');
+      process.exit(1);
+    }
+    groups.at(-1).selectors.push(
+      ...argv[++i]
+        .split('|')
+        .map(s => s.trim())
+        .filter(Boolean),
+    );
   }
 }
 if (!groups.length || groups.some(g => !g.selectors.length)) {
-  console.error('Usage: node review.mjs --url <page> --selector <css> [--selector ...] [--url <page> --selector ...] [--phone] [--port 4747] [--no-open]');
+  console.error(
+    'Usage: node review.mjs --url <page> --selector <css> [--selector ...] [--url <page> --selector ...] [--phone] [--port 4747] [--no-open]',
+  );
   process.exit(1);
 }
-const opt = n => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : undefined; };
+const opt = n => {
+  const i = argv.indexOf(`--${n}`);
+  return i >= 0 ? argv[i + 1] : undefined;
+};
 const viewport = argv.includes('--phone') ? 'phone' : 'desktop';
 const out = resolve(opt('out') || join(tmpdir(), `grain-review-${Date.now()}`));
 mkdirSync(out, { recursive: true });
@@ -39,20 +52,52 @@ const calibration = JSON.parse(readFileSync(new URL('../calibration.json', impor
 console.error(`Taking pictures of ${groups.reduce((n, g) => n + g.selectors.length, 0)} background(s)…`);
 const items = [];
 for (const g of groups) {
-  const r = await shoot({ url: g.url, selectors: g.selectors, wanted: 'all', viewport, out: join(out, String(groups.indexOf(g))), screens: true });
+  const r = await shoot({
+    url: g.url,
+    selectors: g.selectors,
+    wanted: 'all',
+    viewport,
+    out: join(out, String(groups.indexOf(g))),
+    screens: true,
+  });
   for (const it of r.results) items.push({ ...it, url: g.url });
 }
 const ok = items.filter(it => !it.error);
-if (!ok.length) { console.error(items.map(it => `✗ ${it.selector}: ${it.error}`).join('\n')); process.exit(1); }
+if (!ok.length) {
+  console.error(items.map(it => `✗ ${it.selector}: ${it.error}`).join('\n'));
+  process.exit(1);
+}
 
 // What the page needs, with picture paths made relative to the served folder.
 const rel = p => relative(out, p).split(sep).join('/');
-const data = items.map((it, i) => it.error ? { i, selector: it.selector, url: it.url, error: it.error } : {
-  i, selector: it.selector, url: it.url, page: new URL(it.url).pathname, recommended: it.recommended, report: it.report, notes: it.notes,
-  before: rel(join(it.dir, 'before.png')),
-  options: Object.fromEntries(Object.entries(it.pictures).map(([k, p]) => [k, { img: rel(join(it.dir, `${k.replace('@', '-')}.png`)), compare: rel(p.file), metrics: p.metrics,
-    blend: it.results[k.split('@')[0]].blend, opacity: k.includes('@') ? it.results[k.split('@')[0]].screens[k.split('@')[1]].opacity : (it.results[k].screens?.sdr?.opacity ?? it.results[k].opacity) }])),
-});
+const data = items.map((it, i) =>
+  it.error
+    ? { i, selector: it.selector, url: it.url, error: it.error }
+    : {
+        i,
+        selector: it.selector,
+        url: it.url,
+        page: new URL(it.url).pathname,
+        recommended: it.recommended,
+        report: it.report,
+        notes: it.notes,
+        before: rel(join(it.dir, 'before.png')),
+        options: Object.fromEntries(
+          Object.entries(it.pictures).map(([k, p]) => [
+            k,
+            {
+              img: rel(join(it.dir, `${k.replace('@', '-')}.png`)),
+              compare: rel(p.file),
+              metrics: p.metrics,
+              blend: it.results[k.split('@')[0]].blend,
+              opacity: k.includes('@')
+                ? it.results[k.split('@')[0]].screens[k.split('@')[1]].opacity
+                : (it.results[k].screens?.sdr?.opacity ?? it.results[k].opacity),
+            },
+          ]),
+        ),
+      },
+);
 
 const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Grain review</title>
 <style>
@@ -149,37 +194,66 @@ document.getElementById('done').onclick = async () => {
 const server = createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   if (req.method === 'POST' && u.pathname === '/done') {
-    let body = ''; req.on('data', c => (body += c)); req.on('end', () => {
+    let body = '';
+    req.on('data', c => (body += c));
+    req.on('end', () => {
       try {
         const picks = JSON.parse(body);
-        const lines = [], css = [];
+        const lines = [],
+          css = [];
         for (const d of data) {
           if (d.error) continue;
-          const option = picks[d.i] || d.recommended, it = ok.find(x => x.selector === d.selector && x.url === d.url);
+          const option = picks[d.i] || d.recommended,
+            it = ok.find(x => x.selector === d.selector && x.url === d.url);
           lines.push(`grain: ${option}\n${JSON.stringify({ ...it.look, page: d.page })}`);
-          if (option === 'none') { css.push(`/* ${d.selector} (${d.page}): no grain */`); continue; }
-          const a = analyse(it.look, calibration), r = a.results[option];
-          css.push(`/* ==== ${d.selector} (${d.page}) ==== */\n/* Grain (grain skill, ${option}): ${r.tone} ${it.look.kind}, ${r.blend} at ${r.screens?.sdr?.opacity ?? r.opacity}, ${r.measured.grain.toFixed(2)} L*; adapts to HDR and high-contrast screens, off in print. */\n${a.css[option]}`);
+          if (option === 'none') {
+            css.push(`/* ${d.selector} (${d.page}): no grain */`);
+            continue;
+          }
+          const a = analyse(it.look, calibration),
+            r = a.results[option];
+          css.push(
+            `/* ==== ${d.selector} (${d.page}) ==== */\n/* Grain (grain skill, ${option}): ${r.tone} ${it.look.kind}, ${r.blend} at ${r.screens?.sdr?.opacity ?? r.opacity}, ${r.measured.grain.toFixed(2)} L*; adapts to HDR and high-contrast screens, off in print. */\n${a.css[option]}`,
+          );
         }
         writeFileSync(join(out, 'picks.txt'), lines.join('\n') + '\n');
         writeFileSync(join(out, 'grain.css'), css.join('\n\n') + '\n');
         res.writeHead(200).end('ok');
-        console.log(`Picks: ${data.filter(d => !d.error).map(d => `${d.selector} (${d.page}) → ${picks[d.i] || d.recommended}`).join(', ')}`);
+        console.log(
+          `Picks: ${data
+            .filter(d => !d.error)
+            .map(d => `${d.selector} (${d.page}) → ${picks[d.i] || d.recommended}`)
+            .join(', ')}`,
+        );
         console.log(`Saved: ${join(out, 'picks.txt')} and ${join(out, 'grain.css')}`);
-        console.log(`Baselines for check.mjs: ${ok.map(it => `${it.selector} (${new URL(it.url).pathname}) → ${it.dir}`).join('; ')}\n`);
+        console.log(
+          `Baselines for check.mjs: ${ok.map(it => `${it.selector} (${new URL(it.url).pathname}) → ${it.dir}`).join('; ')}\n`,
+        );
         console.log(css.join('\n\n'));
         setTimeout(() => process.exit(0), 300);
-      } catch (e) { res.writeHead(400).end(String(e.message || e)); }
+      } catch (e) {
+        res.writeHead(400).end(String(e.message || e));
+      }
     });
     return;
   }
-  if (u.pathname === '/') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page); }
+  if (u.pathname === '/') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    return res.end(page);
+  }
   const file = resolve(out, '.' + decodeURIComponent(u.pathname));
-  if (!file.startsWith(out) || !existsSync(file)) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' }); res.end(readFileSync(file));
+  if (!file.startsWith(out) || !existsSync(file)) {
+    res.writeHead(404);
+    return res.end();
+  }
+  res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
+  res.end(readFileSync(file));
 });
 const port = +(opt('port') || 4747);
-server.on('error', e => { if (e.code === 'EADDRINUSE') server.listen(0, '127.0.0.1'); else throw e; });
+server.on('error', e => {
+  if (e.code === 'EADDRINUSE') server.listen(0, '127.0.0.1');
+  else throw e;
+});
 server.listen(port, '127.0.0.1', () => {});
 server.on('listening', () => {
   const link = `http://localhost:${server.address().port}/`;
@@ -187,6 +261,8 @@ server.on('listening', () => {
   if (!argv.includes('--no-open')) {
     const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open';
     const args = process.platform === 'win32' ? ['/c', 'start', '', link] : [link];
-    try { spawn(cmd, args, { stdio: 'ignore', detached: true }).unref(); } catch {}
+    try {
+      spawn(cmd, args, { stdio: 'ignore', detached: true }).unref();
+    } catch {}
   }
 });
