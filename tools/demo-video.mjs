@@ -1,82 +1,93 @@
-// Renders the README video from real output: it runs the skill on a test page in headless
-// Chrome, then plays tools/demo/stage.html frame by frame over the screenshots it took.
+// Renders the README video from real output. It opens tools/demo/stage.html in headless
+// Chrome, lets the grain engine solve the stage's gradients, photographs them for the zooms,
+// then captures the stage frame by frame.
 //
-//   npm run demo                    → docs/media/demo.mp4 and docs/media/demo.webp
-//   npm run demo -- showcase-moss   another page from tests/pages
+//   npm run demo   →   docs/media/demo.mp4 and docs/media/demo.webp
 //
 // Needs ffmpeg (mp4) and img2webp (the animated WebP that GitHub shows inline).
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import {
-  openBrowser,
-  openPage,
-  lookAt,
-  shootOptions,
-  LABEL,
-} from '../skills/grainy-gradients/scripts/headless/capture.mjs';
+import { openBrowser } from '../skills/grainy-gradients/scripts/headless/capture.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const page = process.argv[2] || 'showcase-ember';
-const SELECTOR = '#hero';
+const asset = name => readFileSync(join(root, 'skills', 'grainy-gradients', 'assets', name), 'utf8');
 const SIZE = { width: 1280, height: 720, dpr: 1 }; // dpr 1: every video pixel is a real page pixel
 const FPS = 24;
-const ZOOM_PX = 60; // side of the magnified square, in page pixels
+const ZOOM_PX = 100; // side of the "steps / no steps" squares, in page pixels
 
-const dataUrl = png => `data:image/png;base64,${png.toString('base64')}`;
 const out = join(root, 'docs', 'media');
 mkdirSync(out, { recursive: true });
 const frames = mkdtempSync(join(tmpdir(), 'grain-demo-'));
+const sleep = ms => new Promise(done => setTimeout(done, ms));
+const dataUrl = png => JSON.stringify(`data:image/png;base64,${png.toString('base64')}`);
 
 const b = await openBrowser(SIZE);
 try {
-  // 1. Run the skill on the page: look, pick the recommended option, photograph before and after.
-  await openPage(b, pathToFileURL(join(root, 'tests', 'pages', `${page}.html`)).href);
-  const info = await lookAt(b, SELECTOR);
-  const option = info.recommended;
-  const { shots } = await shootOptions(b, SELECTOR, info, [option]);
-  const before = dataUrl(shots.before),
-    after = dataUrl(shots[option]);
-
-  // 2. Open the stage and measure the two screenshots there, with the skill's own pixel code.
   await b.open(pathToFileURL(join(root, 'tools', 'demo', 'stage.html')).href, { settle: 100 });
-  await b.eval(readFileSync(join(root, 'skills', 'grainy-gradients', 'assets', 'grain-pixels.js'), 'utf8'));
+  await b.eval(asset('grain-core.js'));
+  await b.eval(asset('grain-pixels.js'));
+
+  // 1. The engine solves the grain for the stage's card and band.
+  const grain = await b.eval('prepare()');
+  for (const [name, g] of Object.entries(grain)) {
+    console.log(`${name}: ${g.option}, ${g.blend} at ${g.opacity}, ${g.grain.toFixed(2)} L*`);
+  }
+
+  // 2. Photograph the real pixels the zooms will magnify.
+  const photograph = async pose => {
+    const clip = await b.eval(`pose(${JSON.stringify(pose)})`);
+    await sleep(150);
+    return { clip, png: await b.shot(clip) };
+  };
+  const bandBefore = await photograph('band-plain');
+  const bandAfter = await photograph('band-grain');
+  const loupe = await photograph('loupe');
+
+  // 3. Measure them in the page with the skill's own pixel code, and hand the stage its pictures.
   const duration = await b.eval(`(async () => {
     const P = grainPixels;
-    const A = await P.load(${JSON.stringify(before)}), B = await P.load(${JSON.stringify(after)});
+    const A = await P.load(${dataUrl(bandBefore.png)}), B = await P.load(${dataUrl(bandAfter.png)});
     const LA = P.lmap(A), LB = P.lmap(B);
+    const [boost] = P.stretch([A], { x: 0, y: 0, w: A.w, h: A.h });
     const win = P.worstWindow(A, LA, ${ZOOM_PX}, ${ZOOM_PX}, { im: B, L: LB });
     const [zoomBefore, zoomAfter] = P.stretch([A, B], win);
-    const whole = { a: P.stats(A, LA), b: P.stats(B, LB) };
-    const stripes = v => (v >= 10 ? Math.round(v) : v.toFixed(1)) + 'px';
-    const shift = whole.b.mean - whole.a.mean;
+
+    // The staircase: the 8-bit green level of every pixel along the middle of the band.
+    const row = Math.floor(A.h / 2), levels = Array.from({ length: A.w }, (_, x) => A.data[(row * A.w + x) * 4 + 1]);
+    const lo = Math.min(...levels), hi = Math.max(...levels);
+    const staircase = levels.map((v, x) => x + ',' + (68 - ((v - lo) / (hi - lo)) * 66).toFixed(1)).join(' ');
+
+    const before = P.stats(A, LA), after = P.stats(B, LB);
+    const px = v => (v >= 10 ? Math.round(v) : v.toFixed(1)) + 'px';
+    const shift = after.mean - before.mean;
     return init({
-      before: ${JSON.stringify(before)}, after: ${JSON.stringify(after)}, zoomBefore, zoomAfter, win,
-      stats: [
-        ['Stripe width', stripes(P.band(A, win)) + ' <em>→</em> ' + stripes(P.band(B, win))],
-        // Text edges count as texture too, so the grain that was added is the difference in quadrature.
-        ['Grain added', Math.sqrt(Math.max(0, whole.b.grain ** 2 - whole.a.grain ** 2)).toFixed(2) + ' L*'],
-        ['Brightness shift', (shift >= 0 ? '+' : '') + shift.toFixed(2) + ' L*'],
+      boost, zoomBefore, zoomAfter, staircase,
+      loupe: ${dataUrl(loupe.png)}, pick: ${JSON.stringify(loupe.clip)},
+      numbers: [
+        ['STRIPE WIDTH', px(P.band(A, win)) + ' <em>→</em> ' + px(P.band(B, win))],
+        ['GRAIN ADDED', Math.sqrt(Math.max(0, after.grain ** 2 - before.grain ** 2)).toFixed(2) + ' L*'],
+        ['BRIGHTNESS SHIFT', (shift >= 0 ? '+' : '') + shift.toFixed(2) + ' L*'],
       ],
     });
   })()`);
 
-  // 3. One screenshot per frame.
+  // 4. One screenshot per frame.
   const total = Math.round(duration * FPS);
   for (let i = 0; i < total; i++) {
     await b.eval(`seek(${i / FPS})`);
     writeFileSync(join(frames, `${String(i).padStart(4, '0')}.png`), await b.shot());
-    if (i % FPS === 0) process.stdout.write(`\r${page} · ${LABEL[option]} · frame ${i}/${total}`);
   }
-  process.stdout.write('\n');
+  console.log(`${total} frames`);
 } finally {
   await b.close();
 }
 
-// 4. Encode. The mp4 is for sharing; the WebP plays inline in the README.
+// 5. Encode. The mp4 is for sharing; the WebP plays inline in the README.
 const quiet = { stdio: ['ignore', 'ignore', 'inherit'] };
+const mp4 = ['-c:v', 'libx264', '-crf', '16', '-preset', 'slow', '-pix_fmt', 'yuv420p', '-movflags', '+faststart'];
 execFileSync(
   'ffmpeg',
   [
@@ -87,41 +98,18 @@ execFileSync(
     String(FPS),
     '-i',
     join(frames, '%04d.png'),
-    '-c:v',
-    'libx264',
-    '-crf',
-    '17',
-    '-preset',
-    'slow',
-    '-pix_fmt',
-    'yuv420p',
-    '-movflags',
-    '+faststart',
+    ...mp4,
     join(out, 'demo.mp4'),
   ],
   quiet,
 );
-const list = execFileSync('ls', [frames])
-  .toString()
-  .trim()
-  .split('\n')
+const pngs = readdirSync(frames)
+  .sort()
   .map(f => join(frames, f));
+const delay = String(Math.round(1000 / FPS));
 execFileSync(
   'img2webp',
-  [
-    '-loop',
-    '0',
-    '-lossy',
-    '-q',
-    '72',
-    '-m',
-    '4',
-    '-d',
-    String(Math.round(1000 / FPS)),
-    ...list,
-    '-o',
-    join(out, 'demo.webp'),
-  ],
+  ['-loop', '0', '-lossy', '-q', '75', '-m', '4', '-d', delay, ...pngs, '-o', join(out, 'demo.webp')],
   quiet,
 );
 rmSync(frames, { recursive: true, force: true });

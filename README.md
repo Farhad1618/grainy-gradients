@@ -4,9 +4,9 @@
 
 A skill for Claude Code and other coding agents. It adds film grain to your backgrounds so they look printed instead of plastic, removes colour banding, and proves the result with before/after screenshots.
 
-![A dark gradient before and after, then zoomed in: banding steps on the left, none on the right, with the measured numbers](docs/media/demo.webp)
+![The same gradient twice, standard and graded; colour banding on a dark gradient; guessing the opacity against measuring it; zoomed pixels with steps and without](docs/media/demo.webp)
 
-<sub>Rendered from the skill's own screenshots by `npm run demo`. [Download as MP4](docs/media/demo.mp4).</sub>
+<sub>Every pixel and number is the skill's own output, rendered by `npm run demo`. [Download as MP4](docs/media/demo.mp4).</sub>
 
 ## Why not just add noise at 15%?
 
@@ -20,13 +20,11 @@ That is the well-known `feTurbulence` trick, and it works, when the number happe
 | One value for every screen | Adapts to HDR screens and the high-contrast setting, off in print |
 | A script or image to ship | Plain CSS, nothing at runtime |
 
-## Standard and graded
+## On a real site
 
-| | | |
-|---|---|---|
-| ![Slate](docs/media/slate.webp) | ![Sand](docs/media/sand.webp) | ![Moss](docs/media/moss.webp) |
+![A live product page, before and after, with the zoomed background underneath](docs/media/live-site.webp)
 
-Left half before, right half after. The strip underneath is zoomed with the contrast boosted, so the stripes (before) and the grain (after) are easy to see. Open one full size for the real thing.
+A page in production. Left half without the grain, right half with it. The strip underneath is the background zoomed in with the contrast boosted: 88px stripes before, none after.
 
 ## Install
 

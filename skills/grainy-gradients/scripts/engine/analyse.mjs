@@ -10,7 +10,7 @@ const sign = v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`;
 export function analyse(look, calibration) {
   if (!look?.colours?.length)
     throw new Error(
-      `The look has no colours (kind: ${look?.kind}). ${look?.kind === 'photo' ? 'The image could not be read (cross-origin?). Pass a few representative colours by hand.' : 'Run look.js on the element that paints the background.'}`,
+      `The look has no colours (kind: ${look?.kind}). ${look?.kind === 'photo' ? 'The image could not be read (cross-origin?). Pass a few representative colours by hand.' : 'Point it at the element that actually paints the background (often a ::before, ::after or a full-size child).'}`,
     );
   const base = {
     colours: look.colours,

@@ -11,7 +11,7 @@ Restructure. The grain it produces is unchanged.
 - The headless tools read `calibration.json` on every run, so edits apply without a rebuild.
 - `calibration.json` holds only shipped values; the history moved to `docs/calibration-log.md`.
 - Added engine unit tests, Prettier, and CI on every push.
-- README video rendered from the skill's own screenshots (`npm run demo`); pictures are WebP, 7.5 MB down to 1.5 MB.
+- README video rendered from the skill's own screenshots (`npm run demo`); a real production page as the before and after; media is 7.5 MB down to 1.8 MB.
 
 ## 0.2.0 (2026-11-09)
 

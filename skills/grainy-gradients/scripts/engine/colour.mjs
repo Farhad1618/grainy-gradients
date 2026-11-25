@@ -33,8 +33,8 @@ const hslToRgb = (h, s, l) => {
 
 /**
  * '#abc', '#aabbccdd', 'rgb(1 2 3 / .5)', 'hsl(…)', a few names, or [r,g,b] → [r,g,b] (0–255).
- * Alpha is dropped here: look.js mixes see-through colours over what's behind before they get here.
- * Other formats (oklch, color(), color-mix) are converted to hex by look.js in the browser.
+ * Alpha is dropped here: the look mixes see-through colours over what's behind before they get here.
+ * Other formats (oklch, color(), color-mix) are converted to hex in the browser by browser/look.mjs.
  */
 export function parseColour(c) {
   if (Array.isArray(c)) return c.slice(0, 3).map(Number);
@@ -61,7 +61,7 @@ export function parseColour(c) {
       .map(parseFloat);
     return hslToRgb(h, sat, l);
   }
-  throw new Error(`Can't read colour "${c}". Convert it to hex first (look.js does this in the browser).`);
+  throw new Error(`Can't read colour "${c}". Convert it to hex first (the browser tools do this for you).`);
 }
 export const toHex = c =>
   '#' +

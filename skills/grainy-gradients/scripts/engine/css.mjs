@@ -3,7 +3,7 @@ import { noiseSvg, svgUrl } from './noise.mjs';
 import { SCREEN_QUERIES } from './recommend.mjs';
 
 /**
- * How to attach the grain, from what look.js saw:
+ * How to attach the grain, from what the look found (browser/look.mjs):
  *   'one-layer': add the noise as the top background layer of the element itself
  *                (background-blend-mode). Gradients and flat colours with a solid base.
  *   'layer':     a free ::after (or ::before) on the element. Photos and image backgrounds.

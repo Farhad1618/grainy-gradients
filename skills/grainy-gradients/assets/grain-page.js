@@ -117,7 +117,7 @@
       const [h, sat, l] = m[1].split(/[ ,/]+/).filter(Boolean).map(parseFloat);
       return hslToRgb(h, sat, l);
     }
-    throw new Error(`Can't read colour "${c}". Convert it to hex first (look.js does this in the browser).`);
+    throw new Error(`Can't read colour "${c}". Convert it to hex first (the browser tools do this for you).`);
   }
   var toHex = (c) => "#" + c.map(
     (v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")
@@ -599,7 +599,7 @@ ${screenRules(host + pseudo, r, layerDecl)}`;
   function analyse(look2, calibration) {
     if (!look2?.colours?.length)
       throw new Error(
-        `The look has no colours (kind: ${look2?.kind}). ${look2?.kind === "photo" ? "The image could not be read (cross-origin?). Pass a few representative colours by hand." : "Run look.js on the element that paints the background."}`
+        `The look has no colours (kind: ${look2?.kind}). ${look2?.kind === "photo" ? "The image could not be read (cross-origin?). Pass a few representative colours by hand." : "Point it at the element that actually paints the background (often a ::before, ::after or a full-size child)."}`
       );
     const base = {
       colours: look2.colours,
