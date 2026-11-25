@@ -52,7 +52,18 @@
       "date": "2026-11-08"
     }
   ],
-  "picks": [],
+  "picks": [
+    {
+      "group": "gradient",
+      "tone": "dark",
+      "L": 4,
+      "picked": "medium",
+      "grain": 0.81,
+      "method": "WebGL shader, even in L* (constant L* step per pixel)",
+      "note": "Portfolio chessboard hero (blue-black fog, lit ivory). Picked Medium over Subtle/Strong with a live before/after slider. Overlay at the same sky grain put 3.9 L* on the lit floor and was rejected.",
+      "date": "2026-11-24"
+    }
+  ],
   "screens": {
     "about": "Websites can't tell OLED from LCD; they can tell HDR screens (most OLED phones, XDR laptops) and the high-contrast setting. Targets above are for the reference screen the picks were made on. HDR screens show deep darks harder, so dark backgrounds get a little less grain there. High contrast gets less grain everywhere. Factors are a first guess, not confirmed by eye.",
     "reference": "sdr",
